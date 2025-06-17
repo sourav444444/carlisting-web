@@ -16,16 +16,7 @@ import Footer from "@/components/layout/footer"
 import LoginForm from "@/components/admin/login-form"
 import ImageUpload from "@/components/ui/image-upload"
 import { isAuthenticated, logout, getAuthUser } from "@/lib/auth"
-import {
-  getCars,
-  saveCar,
-  updateCar,
-  deleteCar,
-  getEnquiries,
-  deleteEnquiry,
-  type Car,
-  type Enquiry,
-} from "@/lib/storage"
+import { carsApi, enquiriesApi, type Car, type Enquiry } from "@/lib/api-client"
 
 const FloatingLabel = ({ label, value, focused }: { label: string; value: string; focused: boolean }) => (
   <span className={`floating-label ${value || focused ? "active" : ""}`}>{label}</span>
@@ -62,15 +53,23 @@ export default function AdminDashboard() {
     checkAuth()
 
     if (isAuthenticated()) {
-      setCars(getCars())
-      setEnquiries(getEnquiries())
+      fetchData()
     }
   }, [])
 
+  const fetchData = async () => {
+    try {
+      const [carsData, enquiriesData] = await Promise.all([carsApi.getAll(), enquiriesApi.getAll()])
+      setCars(carsData)
+      setEnquiries(enquiriesData)
+    } catch (error) {
+      console.error("Failed to fetch data:", error)
+    }
+  }
+
   const handleLogin = () => {
     setAuthenticated(true)
-    setCars(getCars())
-    setEnquiries(getEnquiries())
+    fetchData()
   }
 
   const handleLogout = () => {
@@ -99,10 +98,8 @@ export default function AdminDashboard() {
     setIsSubmitting(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
       if (editingCar) {
-        const updatedCar = updateCar(editingCar.id, {
+        await carsApi.update(editingCar.id, {
           name: carForm.name,
           price: Number(carForm.price),
           description: carForm.description,
@@ -115,16 +112,14 @@ export default function AdminDashboard() {
           featured: carForm.featured,
         })
 
-        if (updatedCar) {
-          setCars(getCars())
-          toast({
-            title: "🚀 Car Updated Successfully!",
-            description: "The vehicle has been updated in your collection.",
-          })
-          setEditingCar(null)
-        }
+        await fetchData()
+        toast({
+          title: "🚀 Car Updated Successfully!",
+          description: "The vehicle has been updated in your collection.",
+        })
+        setEditingCar(null)
       } else {
-        saveCar({
+        await carsApi.create({
           name: carForm.name,
           price: Number(carForm.price),
           description: carForm.description,
@@ -137,7 +132,7 @@ export default function AdminDashboard() {
           featured: carForm.featured,
         })
 
-        setCars(getCars())
+        await fetchData()
         toast({
           title: "🚀 Car Added Successfully!",
           description: "The new vehicle has been added to your premium collection.",
@@ -183,22 +178,36 @@ export default function AdminDashboard() {
     })
   }
 
-  const handleDeleteCar = (id: number) => {
-    if (deleteCar(id)) {
-      setCars(getCars())
+  const handleDeleteCar = async (id: number) => {
+    try {
+      await carsApi.delete(id)
+      await fetchData()
       toast({
         title: "🗑️ Car Deleted",
         description: "The vehicle has been removed from your collection.",
       })
+    } catch (error) {
+      toast({
+        title: "❌ Error",
+        description: "Failed to delete car. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleDeleteEnquiry = (id: number) => {
-    if (deleteEnquiry(id)) {
-      setEnquiries(getEnquiries())
+  const handleDeleteEnquiry = async (id: number) => {
+    try {
+      await enquiriesApi.delete(id)
+      await fetchData()
       toast({
         title: "🗑️ Enquiry Deleted",
         description: "The enquiry has been removed from your dashboard.",
+      })
+    } catch (error) {
+      toast({
+        title: "❌ Error",
+        description: "Failed to delete enquiry. Please try again.",
+        variant: "destructive",
       })
     }
   }
@@ -485,7 +494,7 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Manage Cars Tab - Same as before but with View Details link */}
+            {/* Manage Cars Tab */}
             <TabsContent value="manage-cars">
               <Card className="card-modern border-0">
                 <CardHeader className="text-center pb-8">
@@ -587,7 +596,7 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Enquiries Tab - Same as before */}
+            {/* Enquiries Tab */}
             <TabsContent value="enquiries">
               <Card className="card-modern border-0">
                 <CardHeader className="text-center pb-8">

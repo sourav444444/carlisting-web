@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { saveEnquiry } from "@/lib/storage"
+import { enquiriesApi } from "@/lib/api-client"
 
 const FloatingLabel = ({ label, value, focused }: { label: string; value: string; focused: boolean }) => (
   <span className={`floating-label ${value || focused ? "active" : ""}`}>{label}</span>
@@ -105,9 +105,7 @@ export default function EnquiryPage() {
     setIsSubmitting(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      saveEnquiry({
+      await enquiriesApi.create({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,

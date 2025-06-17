@@ -10,14 +10,26 @@ import { motion, AnimatePresence } from "framer-motion"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import CarImage from "@/components/ui/car-image"
-import { getCars, type Car } from "@/lib/storage"
+import { carsApi, type Car } from "@/lib/api-client"
 
 export default function HomePage() {
   const [cars, setCars] = useState<Car[]>([])
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setCars(getCars())
+    const fetchCars = async () => {
+      try {
+        const fetchedCars = await carsApi.getAll()
+        setCars(fetchedCars)
+      } catch (error) {
+        console.error("Failed to fetch cars:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCars()
   }, [])
 
   const featuredCars = cars.filter((car) => car.featured)
@@ -30,6 +42,18 @@ export default function HomePage() {
       return () => clearInterval(interval)
     }
   }, [featuredCars.length])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen gradient-bg">
+        <Header />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500" />
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen gradient-bg">

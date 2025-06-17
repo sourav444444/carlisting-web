@@ -26,28 +26,39 @@ import { motion } from "framer-motion"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import CarImage from "@/components/ui/car-image"
-import { getCars, type Car } from "@/lib/storage"
+import { carsApi, type Car } from "@/lib/api-client"
 import { toast } from "@/hooks/use-toast"
 
 export default function CarDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [car, setCar] = useState<Car | null>(null)
+  const [cars, setCars] = useState<Car[]>([])
   const [loading, setLoading] = useState(true)
   const [isFavorite, setIsFavorite] = useState(false)
 
   useEffect(() => {
-    const carId = Number.parseInt(params.id as string)
-    const cars = getCars()
-    const foundCar = cars.find((c) => c.id === carId)
+    const fetchData = async () => {
+      try {
+        const carId = Number.parseInt(params.id as string)
+        const allCars = await carsApi.getAll()
+        setCars(allCars)
 
-    if (foundCar) {
-      setCar(foundCar)
-      // Check if car is in favorites (localStorage)
-      const favorites = JSON.parse(localStorage.getItem("favorites") || "[]")
-      setIsFavorite(favorites.includes(carId))
+        const foundCar = allCars.find((c) => c.id === carId)
+        if (foundCar) {
+          setCar(foundCar)
+          // Check if car is in favorites (localStorage)
+          const favorites = JSON.parse(localStorage.getItem("favorites") || "[]")
+          setIsFavorite(favorites.includes(carId))
+        }
+      } catch (error) {
+        console.error("Failed to fetch car data:", error)
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)
+
+    fetchData()
   }, [params.id])
 
   const toggleFavorite = () => {
@@ -308,7 +319,7 @@ export default function CarDetailPage() {
         >
           <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">You Might Also Like</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {getCars()
+            {cars
               .filter((c) => c.id !== car.id)
               .slice(0, 3)
               .map((relatedCar) => (
